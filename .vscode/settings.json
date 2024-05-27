@@ -1,0 +1,3 @@
+{
+    "dotnet-test-explorer.testProjectPath": "**/*API-test.@(csproj|vbproj|fsproj)"
+}
