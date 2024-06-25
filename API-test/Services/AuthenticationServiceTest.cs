@@ -20,7 +20,7 @@ namespace API_test.Services
         private readonly ITokenService _tokenService;
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IUsersService _usersService;
-        private readonly IAuthenticationService _authenticationService;
+        private readonly AuthenticationService _authenticationService;
 
         public AuthenticationServiceTest()
         {
@@ -75,6 +75,83 @@ namespace API_test.Services
             result.Value?.UserName.Should().Be(username);
             result.Value?.Token.Should().BeOfType<string>();
             result.Value?.Token.Should().Be(token);
+        }
+
+        [Fact]
+        public async void AuthenticationService_Login_ShouldReturn401IfUsernameInvalid()
+        {
+            //ARRANGE
+            LoginRequest request = new()
+            {
+                UserName = "username",
+                Password = "password",
+            };
+
+
+            A.CallTo(() => _userManager.FindByNameAsync(request.UserName))
+                .Returns<User?>(null);
+
+            //ACT
+            var result = await _authenticationService.Login(request);
+            //ASSERT
+            result.Should().NotBeNull();
+            result.Should().BeOfType<ActionResult<LoginResponse>>();
+            result.Value.Should().BeNull();
+            result.Result.Should().BeOfType<UnauthorizedObjectResult>();
+        }
+
+        [Fact]
+        public async void AuthenticationService_Login_ShouldReturn401IfPasswordInvalid()
+        {
+            //ARRANGE
+            LoginRequest request = new()
+            {
+                UserName = "username",
+                Password = "password",
+            };
+
+            User user = new() { Id = 1, UserName = request.UserName, PasswordHash = "password" };
+
+            A.CallTo(() => _userManager.FindByNameAsync(request.UserName))
+                .Returns(user);
+
+            A.CallTo(() => _userManager.CheckPasswordAsync(user, request.Password))
+                .Returns(false);
+
+            //ACT
+            var result = await _authenticationService.Login(request);
+            //ASSERT
+            result.Should().NotBeNull();
+            result.Should().BeOfType<ActionResult<LoginResponse>>();
+            result.Value.Should().BeNull();
+            result.Result.Should().BeOfType<UnauthorizedObjectResult>();
+        }
+
+        [Fact]
+        public async void AuthenticationService_RegisterUser_UsersServiceMethodShouldbeCalled()
+        {
+            //ARRANGE
+            RegisterUserRequest request = new()
+            {
+                UserName = "username",
+                Password = "password",
+            };
+
+            LoginResponse response = new()
+            {
+                UserName = "username",
+                Token = "token"
+            };
+
+            A.CallTo(() => _usersService.CreateUser(request))
+                .Returns(response);
+            //ACT
+            var result = await _authenticationService.RegisterUser(request);
+            //ASSERT
+            A.CallTo(() => _usersService.CreateUser(request)).MustHaveHappenedOnceExactly();
+            result.Should().NotBeNull();
+            result.Should().BeOfType<ActionResult<LoginResponse>>();
+            result.Value.Should().BeEquivalentTo(response);
         }
     }
 }

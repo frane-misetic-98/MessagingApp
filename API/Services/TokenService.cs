@@ -9,7 +9,7 @@ namespace API.Services
 {
     public class TokenService(IConfiguration config) : ITokenService
     {
-        private readonly SymmetricSecurityKey _key = new(Encoding.UTF8.GetBytes(config["TokenKey"]));
+        private readonly SymmetricSecurityKey _key = new(Encoding.UTF8.GetBytes(config.GetValue<string>("TokenKey")));
 
         public string CreateToken(User user)
         {

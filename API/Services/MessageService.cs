@@ -5,6 +5,7 @@ using API.Entities;
 using API.Interfaces;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -27,12 +28,12 @@ namespace API.Services
 
             var query = _context.Messages
                             .Where(
-                                x => x.SenderId == requestUserId ||
-                                x.SenderId == recipientId ||
-                                x.RecipientId == requestUserId ||
-                                x.RecipientId == recipientId
+                                x => (x.SenderId == requestUserId &&
+                                x.RecipientId == recipientId) ||
+                                (x.SenderId == recipientId &&
+                                x.RecipientId == requestUserId)
                             )
-                            .OrderByDescending(x => x.MessageSent)
+                            .OrderBy(x => x.MessageSent)
                             .AsQueryable();
 
             return await query.ProjectTo<MessageDto>(_mapper.ConfigurationProvider).ToListAsync();
@@ -68,7 +69,7 @@ namespace API.Services
 
             if (await _context.SaveChangesAsync() > 0)
             {
-                return new OkObjectResult("");
+                return new CreatedAtActionResult("", "", "", "Message sent successfully");
             }
 
             return new StatusCodeResult(500);
@@ -91,7 +92,7 @@ namespace API.Services
 
             if (await _context.SaveChangesAsync() > 0)
             {
-                return new OkObjectResult("");
+                return new OkObjectResult("Message deleted successfully");
             }
 
             return new StatusCodeResult(500);

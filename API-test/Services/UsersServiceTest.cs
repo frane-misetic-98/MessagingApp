@@ -59,6 +59,15 @@ namespace API_test.Services
                 UserName = username,
                 Password = password
             };
+
+            User user = new() { Id = 1, UserName = username };
+
+            A.CallTo(() => _mapper.Map<User>(request)).Returns(user);
+
+            A.CallTo(() => _userManager.CreateAsync(user, request.Password))
+                .Returns(IdentityResult.Success);
+
+            A.CallTo(() => _tokenService.CreateToken(user)).Returns("token");
             //ACT
             var result = await _usersService.CreateUser(request);
             //ASSERT
@@ -66,7 +75,8 @@ namespace API_test.Services
             result.Should().BeOfType<ActionResult<LoginResponse>>();
             result.Value.Should().NotBeNull();
             result.Value?.UserName.Should().Be(username);
-            result.Value?.Token.Should().BeOfType<string>();
+            result.Value?.Token.Should().NotBeNull();
+            result.Value?.Token.Should().Be("token");
 
             await AfterEach();
         }
@@ -117,7 +127,7 @@ namespace API_test.Services
             };
 
             A.CallTo(() => _userManager.CreateAsync(user, request.Password))
-             .Returns(new IdentityResult());
+             .Returns(IdentityResult.Failed());
 
             //ACT
             var result = await _usersService.CreateUser(request);
@@ -162,12 +172,12 @@ namespace API_test.Services
         public async Task UsersService_GetUser_ReturnsNotFoundIfUserDoesNotExist()
         {
             //ARRANGE
-            var id = 1;
             //ACT
-            var result = await _usersService.GetUser(id);
+            var result = await _usersService.GetUser(1);
             //ASSERT
             result.Should().NotBeNull();
             result.Should().BeOfType<ActionResult<UserDto>>();
+            result.Value.Should().BeNull();
             result.Result.Should().BeOfType<NotFoundObjectResult>();
 
             await AfterEach();
